@@ -24,8 +24,8 @@ def create_prim_conv3d_caps(inputs, channels, kernel_size, strides, name, paddin
     :return: Returns capsules of the form (poses, activations). Poses have shape (N, D_out, H_out, W_out, C_out, M)
     where M is the height*width of the pose matrix. Activations have shape (N, D_out, H_out, W_out, C_out, 1).
     """
-    batch_size = tf.shape(inputs)[0]
-    poses = tf.layers.conv3d(inputs=inputs, filters=channels * mdim2, kernel_size=kernel_size,
+    batch_size = tf.shape(input=inputs)[0]
+    poses = tf.compat.v1.layers.conv3d(inputs=inputs, filters=channels * mdim2, kernel_size=kernel_size,
                              strides=strides, padding=padding, activation=activation, name=name+'_pose')
 
     _, d, h, w, _ = poses.get_shape().as_list()
@@ -33,7 +33,7 @@ def create_prim_conv3d_caps(inputs, channels, kernel_size, strides, name, paddin
 
     pose = tf.reshape(poses, (batch_size, d, h, w, channels, mdim2))
 
-    acts = tf.layers.conv3d(inputs=inputs, filters=channels, kernel_size=kernel_size,
+    acts = tf.compat.v1.layers.conv3d(inputs=inputs, filters=channels, kernel_size=kernel_size,
                             strides=strides, padding=padding, activation=tf.nn.sigmoid, name=name+'_act')
     activation = tf.reshape(acts, (batch_size, d, h, w, channels, 1))
 
@@ -58,10 +58,10 @@ def em_routing(v, a_i, beta_v, beta_a, n_iterations=3):
     :return: Returns capsules of the form (poses, activations). Poses have shape (N, C_out, M) where M is the
     height*width of the pose matrix. Activations have shape (N, C_out, 1).
     """
-    batch_size = tf.shape(v)[0]
+    batch_size = tf.shape(input=v)[0]
     _, _, n_caps_j, mat_len = v.get_shape().as_list()
     n_caps_j, mat_len = map(int, [n_caps_j, mat_len])
-    n_caps_i = tf.shape(v)[1]
+    n_caps_i = tf.shape(input=v)[1]
 
     a_i = tf.expand_dims(a_i, axis=-1)
 
@@ -69,26 +69,26 @@ def em_routing(v, a_i, beta_v, beta_a, n_iterations=3):
     r = tf.ones(shape=(batch_size, n_caps_i, n_caps_j, 1), dtype=tf.float32)/float(n_caps_j)
     r = tf.multiply(r, a_i)
 
-    den = tf.reduce_sum(r, axis=1, keep_dims=True) + epsilon
+    den = tf.reduce_sum(input_tensor=r, axis=1, keepdims=True) + epsilon
 
     # Mean: shape=(N, 1, Ch_j, mat_len)
-    m_num = tf.reduce_sum(v*r, axis=1, keep_dims=True)
+    m_num = tf.reduce_sum(input_tensor=v*r, axis=1, keepdims=True)
     m = m_num/(den + epsilon)
 
     # Stddev: shape=(N, 1, Ch_j, mat_len)
-    s_num = tf.reduce_sum(r * tf.square(v - m), axis=1, keep_dims=True)
+    s_num = tf.reduce_sum(input_tensor=r * tf.square(v - m), axis=1, keepdims=True)
     s = s_num/(den + epsilon)
 
     # cost_h: shape=(N, 1, Ch_j, mat_len)
-    cost = (beta_v + tf.log(tf.sqrt(s + epsilon) + epsilon)) * den
+    cost = (beta_v + tf.math.log(tf.sqrt(s + epsilon) + epsilon)) * den
     # cost_h: shape=(N, 1, Ch_j, 1)
-    cost = tf.reduce_sum(cost, axis=-1, keep_dims=True)
+    cost = tf.reduce_sum(input_tensor=cost, axis=-1, keepdims=True)
 
     # calculates the mean and std_deviation of the cost
-    cost_mean = tf.reduce_mean(cost, axis=-2, keep_dims=True)
+    cost_mean = tf.reduce_mean(input_tensor=cost, axis=-2, keepdims=True)
     cost_stdv = tf.sqrt(
         tf.reduce_sum(
-            tf.square(cost - cost_mean), axis=-2, keep_dims=True
+            input_tensor=tf.square(cost - cost_mean), axis=-2, keepdims=True
         ) / n_caps_j + epsilon
     )
 
@@ -100,30 +100,30 @@ def em_routing(v, a_i, beta_v, beta_a, n_iterations=3):
         return tf.less(counter, n_iterations)
 
     def route(mean, stdsqr, act_j, counter):
-        exp = tf.reduce_sum(tf.square(v - mean) / (2 * stdsqr + epsilon), axis=-1)
-        coef = 0 - .5 * tf.reduce_sum(tf.log(2 * np.pi * stdsqr + epsilon), axis=-1)
+        exp = tf.reduce_sum(input_tensor=tf.square(v - mean) / (2 * stdsqr + epsilon), axis=-1)
+        coef = 0 - .5 * tf.reduce_sum(input_tensor=tf.math.log(2 * np.pi * stdsqr + epsilon), axis=-1)
         log_p_j = coef - exp
 
-        log_ap = tf.reshape(tf.log(act_j + epsilon), (batch_size, 1, n_caps_j)) + log_p_j
+        log_ap = tf.reshape(tf.math.log(act_j + epsilon), (batch_size, 1, n_caps_j)) + log_p_j
         r_ij = tf.nn.softmax(log_ap + epsilon)  # ap / (tf.reduce_sum(ap, axis=-1, keep_dims=True) + epsilon)
 
         r_ij = tf.multiply(tf.expand_dims(r_ij, axis=-1), a_i)
 
-        denom = tf.reduce_sum(r_ij, axis=1, keep_dims=True)
-        m_numer = tf.reduce_sum(v * r_ij, axis=1, keep_dims=True)
+        denom = tf.reduce_sum(input_tensor=r_ij, axis=1, keepdims=True)
+        m_numer = tf.reduce_sum(input_tensor=v * r_ij, axis=1, keepdims=True)
         mean = m_numer / (denom + epsilon)
 
-        s_numer = tf.reduce_sum(r_ij * tf.square(v - mean), axis=1, keep_dims=True)
+        s_numer = tf.reduce_sum(input_tensor=r_ij * tf.square(v - mean), axis=1, keepdims=True)
         stdsqr = s_numer / (denom + epsilon)
 
-        cost_h = (beta_v + tf.log(tf.sqrt(stdsqr) + epsilon)) * denom
-        cost_h = tf.reduce_sum(cost_h, axis=-1, keep_dims=True)
+        cost_h = (beta_v + tf.math.log(tf.sqrt(stdsqr) + epsilon)) * denom
+        cost_h = tf.reduce_sum(input_tensor=cost_h, axis=-1, keepdims=True)
 
         # these are calculated for numerical stability.
-        cost_h_mean = tf.reduce_mean(cost_h, axis=-2, keep_dims=True)
+        cost_h_mean = tf.reduce_mean(input_tensor=cost_h, axis=-2, keepdims=True)
         cost_h_stdv = tf.sqrt(
             tf.reduce_sum(
-                tf.square(cost_h - cost_h_mean), axis=-2, keep_dims=True
+                input_tensor=tf.square(cost_h - cost_h_mean), axis=-2, keepdims=True
             ) / n_caps_j
         )
 
@@ -133,7 +133,7 @@ def em_routing(v, a_i, beta_v, beta_a, n_iterations=3):
 
         return mean, stdsqr, act_j, tf.add(counter, 1)
 
-    [mean, _, act_j, _] = tf.while_loop(condition, route, [m, s, a_j, 1.0])
+    [mean, _, act_j, _] = tf.while_loop(cond=condition, body=route, loop_vars=[m, s, a_j, 1.0])
 
     return tf.reshape(mean, (batch_size, n_caps_j, mat_len)), tf.reshape(act_j, (batch_size, n_caps_j, 1))
 
@@ -147,7 +147,7 @@ def create_coords_mat(pose, rel_center):
     :param rel_center: whether or not the coordinates are relative to the center of the map
     :return: Returns the coordinates (padded to 16) for the incoming capsules.
     """
-    batch_size = tf.shape(pose)[0]
+    batch_size = tf.shape(input=pose)[0]
     shape_list = [int(x) for x in pose.get_shape().as_list()[1:-2]]
     ch = int(pose.get_shape().as_list()[-2])
     n_dims = len(shape_list)
@@ -192,11 +192,11 @@ def get_subset(u_i, coords, activation, k):
     :param k: Number of capsules which will be routed
     :return: New u_i, coords, and activation which only have k of the most active capsules per channel
     """
-    batch_size, n_capsch_i, ch = tf.shape(u_i)[0], int(u_i.get_shape().as_list()[1]), tf.shape(u_i)[2]
+    batch_size, n_capsch_i, ch = tf.shape(input=u_i)[0], int(u_i.get_shape().as_list()[1]), tf.shape(input=u_i)[2]
 
     inputs_res = tf.reshape(tf.concat([u_i, coords, activation], axis=-1), (batch_size, n_capsch_i, ch, mdim2*2+1))
 
-    trans = tf.transpose(inputs_res, [0, 2, 1, 3])
+    trans = tf.transpose(a=inputs_res, perm=[0, 2, 1, 3])
 
     norms = tf.reshape(trans[:, :, :, -1], (batch_size, ch, n_capsch_i))
 
@@ -217,7 +217,7 @@ def get_subset(u_i, coords, activation, k):
 
     top_caps = tf.gather_nd(trans, coords)
 
-    top_caps = tf.transpose(top_caps, (0, 2, 1, 3))
+    top_caps = tf.transpose(a=top_caps, perm=(0, 2, 1, 3))
     top_poses = top_caps[:, :, :, :mdim2]
     top_coords = top_caps[:, :, :, mdim2:-1]
     top_acts = top_caps[:, :, :, -1:]
@@ -245,7 +245,7 @@ def create_dense_caps(inputs, n_caps_j, name, subset_routing=-1, route_min=0.0, 
     :return: Returns a layer of capsules. Shape ((N, n_caps_j, M), (N, n_caps_j, 1))
     """
     pose, activation = inputs
-    batch_size = tf.shape(pose)[0]
+    batch_size = tf.shape(input=pose)[0]
     shape_list = [int(x) for x in pose.get_shape().as_list()[1:]]
     ch = int(shape_list[-2])
     n_capsch_i = 1 if len(shape_list) == 2 else reduce((lambda x, y: x * y), shape_list[:-2])
@@ -266,16 +266,16 @@ def create_dense_caps(inputs, n_caps_j, name, subset_routing=-1, route_min=0.0, 
 
     # calculates votes
     if ch_same_w:
-        weights = tf.get_variable(name=name + '_weights', shape=(ch, n_caps_j, mdim, mdim),
-                                  initializer=tf.initializers.random_normal(stddev=0.1),
-                                  regularizer=tf.contrib.layers.l2_regularizer(0.1))
+        weights = tf.compat.v1.get_variable(name=name + '_weights', shape=(ch, n_caps_j, mdim, mdim),
+                                  initializer=tf.compat.v1.initializers.random_normal(stddev=0.1),
+                                  regularizer=tf.keras.regularizers.l2(0.5 * (0.1)))
 
         votes = tf.einsum('ijab,ntijbc->ntijac', weights, u_i)
         votes = tf.reshape(votes, (batch_size, n_capsch_i * ch, n_caps_j, mdim2))
     else:
-        weights = tf.get_variable(name=name + '_weights', shape=(n_capsch_i, ch, n_caps_j, mdim, mdim),
-                                  initializer=tf.initializers.random_normal(stddev=0.1),
-                                  regularizer=tf.contrib.layers.l2_regularizer(0.1))
+        weights = tf.compat.v1.get_variable(name=name + '_weights', shape=(n_capsch_i, ch, n_caps_j, mdim, mdim),
+                                  initializer=tf.compat.v1.initializers.random_normal(stddev=0.1),
+                                  regularizer=tf.keras.regularizers.l2(0.5 * (0.1)))
         votes = tf.einsum('tijab,ntijbc->ntijac', weights, u_i)
         votes = tf.reshape(votes, (batch_size, n_capsch_i * ch, n_caps_j, mdim2))
 
@@ -286,15 +286,15 @@ def create_dense_caps(inputs, n_caps_j, name, subset_routing=-1, route_min=0.0, 
 
     # performs thresholding, so only capsules with activations over the threshold "route_min" are routed
     acts = tf.reshape(activation, (batch_size, n_capsch_i * ch, 1))
-    activations = tf.where(tf.greater_equal(acts, tf.constant(route_min)), acts, tf.zeros_like(acts))
+    activations = tf.compat.v1.where(tf.greater_equal(acts, tf.constant(route_min)), acts, tf.zeros_like(acts))
 
     # creates the routing parameters
-    beta_v = tf.get_variable(name=name + '_beta_v', shape=(n_caps_j, mdim2),
-                             initializer=tf.initializers.random_normal(stddev=0.1),
-                             regularizer=tf.contrib.layers.l2_regularizer(0.1))
-    beta_a = tf.get_variable(name=name + '_beta_a', shape=(n_caps_j, 1),
-                             initializer=tf.initializers.random_normal(stddev=0.1),
-                             regularizer=tf.contrib.layers.l2_regularizer(0.1))
+    beta_v = tf.compat.v1.get_variable(name=name + '_beta_v', shape=(n_caps_j, mdim2),
+                             initializer=tf.compat.v1.initializers.random_normal(stddev=0.1),
+                             regularizer=tf.keras.regularizers.l2(0.5 * (0.1)))
+    beta_a = tf.compat.v1.get_variable(name=name + '_beta_a', shape=(n_caps_j, 1),
+                             initializer=tf.compat.v1.initializers.random_normal(stddev=0.1),
+                             regularizer=tf.keras.regularizers.l2(0.5 * (0.1)))
 
     # performs EM-routing and returns the new capsules
     return em_routing(votes, activations, beta_v, beta_a)
@@ -328,11 +328,11 @@ def create_conv3d_caps(inputs, channels, kernel_size, strides, name, padding='VA
     # pads the input
     if padding == 'SAME':
         d_padding, h_padding, w_padding = int(float(kernel_size[0]) / 2), int(float(kernel_size[1]) / 2), int(float(kernel_size[2]) / 2)
-        u_padded = tf.pad(inputs, [[0, 0], [d_padding, d_padding], [h_padding, h_padding], [w_padding, w_padding], [0, 0], [0, 0]])
+        u_padded = tf.pad(tensor=inputs, paddings=[[0, 0], [d_padding, d_padding], [h_padding, h_padding], [w_padding, w_padding], [0, 0], [0, 0]])
     else:
         u_padded = inputs
 
-    batch_size = tf.shape(u_padded)[0]
+    batch_size = tf.shape(input=u_padded)[0]
     _, d, h, w, ch, _ = u_padded.get_shape().as_list()
     d, h, w, ch = map(int, [d, h, w, ch])
 
@@ -348,12 +348,12 @@ def create_conv3d_caps(inputs, channels, kernel_size, strides, name, padding='VA
     d_gathered = tf.gather(u_padded, d_offsets, axis=1)
     h_gathered = tf.gather(d_gathered, h_offsets, axis=3)
     w_gathered = tf.gather(h_gathered, w_offsets, axis=5)
-    w_gathered = tf.transpose(w_gathered, [0, 1, 3, 5, 2, 4, 6, 7, 8])
+    w_gathered = tf.transpose(a=w_gathered, perm=[0, 1, 3, 5, 2, 4, 6, 7, 8])
 
     # obtains the next layer of capsules
     if route_mean:
         kernels_reshaped = tf.reshape(w_gathered, [batch_size * d_out * h_out * w_out, kernel_size[0]* kernel_size[1]* kernel_size[2], ch, mdim2 + 1])
-        kernels_reshaped = tf.reduce_mean(kernels_reshaped, axis=1)
+        kernels_reshaped = tf.reduce_mean(input_tensor=kernels_reshaped, axis=1)
         capsules = create_dense_caps((kernels_reshaped[:, :, :-1], kernels_reshaped[:, :, -1:]), channels, name,
                                      route_min=route_min, ch_same_w=ch_same_w)
     else:

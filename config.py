@@ -1,9 +1,8 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # batch size and number of epochs
-batch_size = 8
-n_epochs = 120
+batch_size = 1
+n_epochs = 10
 
 # number of epochs to train in between validations
 n_eps_for_eval = 3
@@ -23,11 +22,14 @@ epsilon = 1e-6
 use_c3d_weights = True
 
 # number of classes for the network to predict
-n_classes = 24
+n_classes = 2
 
 # model number, output file name, save file directory, and save file name
 model_num = 2
 output_file_name = './output%d.txt' % model_num
+logdir = './logdir/'
+if not os.path.exists(logdir):  # creates the directory if it does not exist
+    os.mkdir(logdir)
 network_save_dir = './network_saves/'
 if not os.path.exists(network_save_dir):  # creates the directory if it does not exist
     os.mkdir(network_save_dir)
@@ -42,7 +44,7 @@ m_delta = 0.1
 n_eps_for_m = 5
 
 # number of frames to skip in the data
-frame_skip = 2
+frame_skip = 1
 
 # time to wait for data to load when dataloader is created
 wait_for_data = 5
