@@ -209,7 +209,6 @@ dmypy.json
 Будет удалено .idea/modules.xml
 Будет удалено .idea/other.xml
 Будет удалено .idea/vcs.xml
-Будет удалено UCF101_Frames/
 Будет удалено ava_train_v2.2.csv
 Будет удалено c3d_pretrained/conv3d_deepnetA_sport1m_iter_1900000_TF.model
 Будет удалено fightData.txt
@@ -218,3 +217,4 @@ dmypy.json
 Будет удалено output1.txt
 Будет удалено smokeData.txt
 Будет удалено trainFiles.py
+Будет удалено .idea/VideoCapsuleNetUpd.iml
