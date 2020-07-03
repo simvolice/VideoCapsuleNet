@@ -1,6 +1,6 @@
 import shutil
 import os
-outdir_clips = "/root/PycharmProjects/VideoCapsuleNet/UCF101_Frames/backup/frames/"
+outdir_clips = "/root/PycharmProjects/VideoCapsuleNet/UCF101_Frames/frames/"
 
 allFrameDirs = os.listdir(outdir_clips)
 
