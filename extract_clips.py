@@ -2,9 +2,9 @@ import os
 import subprocess
 import glob
 
-videodir = "/root/PycharmProjects/VideoCapsuleNet/upgrade/UCF101_Frames/backup/dataSetSmokeTrain/dataFight/"
+videodir = "/root/PycharmProjects/VideoCapsuleNet/UCF101_Frames/backup/dataSetSmokeTrain/dataFight/"
 
-outdir_clips = "/root/PycharmProjects/VideoCapsuleNet/upgrade/UCF101_Frames/backup/frames/"
+outdir_clips = "/root/PycharmProjects/VideoCapsuleNet/UCF101_Frames/backup/frames/"
 if not os.path.isdir(outdir_clips):
     os.makedirs(outdir_clips)
 clip_length = 2  # seconds
