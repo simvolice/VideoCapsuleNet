@@ -4,9 +4,11 @@ import math
 import numpy as np
 from scipy.misc import imread
 import random
+import cv2
 from threading import Thread
 
-dataset_dir = '/root/PycharmProjects/VideoCapsuleNetUpd/'
+dataset_dir = '../VideoCapsuleNetUpd/'
+frame_dir = './UCF101_Frames/frames/'
 
 
 def get_det_annotations():
@@ -1365,7 +1367,7 @@ def get_det_annotations():
                  "z3kgrh0L_80:1269:1269:0.443:0.062:0.962:0.982", "z3kgrh0L_80:1270:1270:0.619:0.263:0.871:0.950",
                  "z3kgrh0L_80:1271:1271:0.481:0.157:0.713:0.970", "z3kgrh0L_80:1272:1272:0.533:0.277:0.753:0.911",
                  "z3kgrh0L_80:1276:1276:0.439:0.305:0.602:0.724"]
-    f = ["-IELREHX_js:0997:0997:0.025:0.011:0.687:1.000", "-IELREHX_js:1037:1037:0.512:0.341:0.647:0.868",
+    smokeData = ["-IELREHX_js:0997:0997:0.025:0.011:0.687:1.000", "-IELREHX_js:1037:1037:0.512:0.341:0.647:0.868",
          "-IELREHX_js:1698:1698:0.494:0.000:0.972:0.980", "-IELREHX_js:1699:1699:0.478:0.000:0.968:1.000",
          "-IELREHX_js:1700:1700:0.491:0.011:0.975:0.960", "-IELREHX_js:1701:1701:0.451:0.046:0.967:0.973",
          "-IELREHX_js:1702:1702:0.504:0.037:0.973:0.962", "-IELREHX_js:1703:1703:0.493:0.047:0.972:0.962",
@@ -2861,34 +2863,34 @@ def get_det_annotations():
          "z3kgrh0L_80:1052:1052:0.602:0.010:1.000:1.000", "z3kgrh0L_80:1053:1053:0.597:0.063:1.000:1.000",
          "z3kgrh0L_80:1065:1065:0.151:0.052:0.617:1.000", "z3kgrh0L_80:1066:1066:0.000:0.376:0.468:0.993",
          "z3kgrh0L_80:1069:1069:0.000:0.000:0.356:1.000"]
-    files = os.listdir("/root/PycharmProjects/VideoCapsuleNetUpd/UCF101_Frames/frames/")
+    files = os.listdir("./UCF101_Frames/frames/")
     training_annotations = []
     training_annotationsPureNameFiles = []
     training_annotationsPureNameFilesFight = []
 
-    for filename in f:
+    for filename in smokeData:
         splitStr = filename.split(":")
         nameVideoFromList = splitStr[0]
         startFrameVideoFromList = splitStr[1]
         label = 0
         resultNameVid = nameVideoFromList + "_" + startFrameVideoFromList
-        bbox = [math.ceil(float(splitStr[3])), math.ceil(float(splitStr[4])), math.ceil(float(splitStr[5])),
-                math.ceil(float(splitStr[6]))]
-        bboxForOneFile = []
+
         file_name = resultNameVid
         annotations = []
         ef = 40
         sf = 0
 
-        for val in range(0, 40):
-            bboxForOneFile.append(bbox)
-        bboxes = np.array(bboxForOneFile).astype(np.int32)
         for fileItem in files:
-            splitStrVideoDir = fileItem.split(".")
-            nameVideoFromVideoDir = splitStrVideoDir[0]
-            if nameVideoFromVideoDir == file_name:
-
+            if fileItem == file_name:
                 if file_name not in training_annotationsPureNameFiles:
+                    image = cv2.imread(os.path.join(frame_dir, fileItem, "frame_0.jpg"))
+                    h, w, d = image.shape
+                    bbox = [float(splitStr[3]) * w, float(splitStr[4]) * h, float(splitStr[5]) * w,
+                            float(splitStr[6]) * h]
+                    bboxForOneFile = []
+                    for val in range(0, 40):
+                        bboxForOneFile.append(bbox)
+                    bboxes = np.array(bboxForOneFile).astype(np.int32)
                     training_annotationsPureNameFiles.append(file_name)
                     annotations.append((sf, ef, label, bboxes))
                     training_annotations.append((file_name, annotations))
@@ -2898,23 +2900,23 @@ def get_det_annotations():
         startFrameVideoFromList = splitStr[1]
         label = 1
         resultNameVid = nameVideoFromList + "_" + startFrameVideoFromList
-        bbox = [math.ceil(float(splitStr[3])), math.ceil(float(splitStr[4])), math.ceil(float(splitStr[5])),
-                math.ceil(float(splitStr[6]))]
-        bboxForOneFile = []
+
         file_name = resultNameVid
         annotations = []
         ef = 40
         sf = 0
 
-        for val in range(0, 40):
-            bboxForOneFile.append(bbox)
-        bboxes = np.array(bboxForOneFile).astype(np.int32)
         for fileItem in files:
-            splitStrVideoDir = fileItem.split(".")
-            nameVideoFromVideoDir = splitStrVideoDir[0]
-            if nameVideoFromVideoDir == file_name:
-
+            if fileItem == file_name:
                 if file_name not in training_annotationsPureNameFilesFight:
+                    image = cv2.imread(os.path.join(frame_dir, fileItem, "frame_0.jpg"))
+                    h, w, d = image.shape
+                    bbox = [float(splitStr[3]) * w, float(splitStr[4]) * h, float(splitStr[5]) * w,
+                            float(splitStr[6]) * h]
+                    bboxForOneFile = []
+                    for val in range(0, 40):
+                        bboxForOneFile.append(bbox)
+                    bboxes = np.array(bboxForOneFile).astype(np.int32)
                     training_annotationsPureNameFilesFight.append(file_name)
                     annotations.append((sf, ef, label, bboxes))
                     training_annotations.append((file_name, annotations))
