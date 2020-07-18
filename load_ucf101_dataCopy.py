@@ -3060,7 +3060,7 @@ class UCF101TrainDataGenDet(object):
             clip, bbox_clip, label = get_video_det(self.frames_dir + vid_name + '/', anns, skip_frames=self.frame_skip,
                                                    start_rand=False)
             clip, bbox_clip = get_clip_det(clip, bbox_clip, any_clip=False)
-            clip, bbox_clip = crop_clip_det(clip, bbox_clip, shuffle=True)
+            clip, bbox_clip = crop_clip_det(clip, bbox_clip, (352, 472), shuffle=True)
             self.data_queue.append((clip, bbox_clip, label))
         print('Loading data thread finished')
 

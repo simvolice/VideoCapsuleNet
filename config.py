@@ -2,7 +2,7 @@ import os
 
 # batch size and number of epochs
 batch_size = 1
-n_epochs = 10
+n_epochs = 1
 
 # number of epochs to train in between validations
 n_eps_for_eval = 3
