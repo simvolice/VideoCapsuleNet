@@ -21,7 +21,7 @@ def create_skip_connection(in_caps_layer, n_units, kernel_size, strides=(1, 1, 1
 
 
 class Caps3d(object):
-    def __init__(self, input_shape=(None, 8, 352, 472, 3)):
+    def __init__(self, input_shape=(None, 8, config.height, config.width, 3)):
         self.input_shape = input_shape
         self.graph = tf.Graph()
 
@@ -31,7 +31,7 @@ class Caps3d(object):
             # inputs to the network
             self.x_input = tf.compat.v1.placeholder(dtype=tf.float32, shape=self.input_shape)
             self.y_input = tf.compat.v1.placeholder(dtype=tf.int32, shape=[None])
-            self.y_bbox = tf.compat.v1.placeholder(dtype=tf.float32, shape=(None, 8, 352, 472, 1))
+            self.y_bbox = tf.compat.v1.placeholder(dtype=tf.float32, shape=(None, 8, config.height, config.width, 1))
             self.is_train = tf.compat.v1.placeholder(tf.bool)
             self.m = tf.compat.v1.placeholder(tf.float32, shape=())
 
@@ -155,8 +155,8 @@ class Caps3d(object):
         masked_caps = tf.reshape(masked_caps, (batch_size, n_classes * dim))
 
         # creates the decoder network
-        recon_fc1 = tf.compat.v1.layers.dense(masked_caps, 4 * 8 * 8 * 1, activation=tf.nn.relu, name='recon_fc1')
-        recon_fc1 = tf.reshape(recon_fc1, (batch_size, 4, 38, 53, 1))
+        recon_fc1 = tf.compat.v1.layers.dense(masked_caps, 256, activation=tf.nn.relu, name='recon_fc1')
+        recon_fc1 = tf.reshape(recon_fc1, (batch_size, 4, 31, 44, 1))
 
         deconv1 = tf.compat.v1.layers.conv3d_transpose(recon_fc1, 128, kernel_size=[1, 3, 3], strides=[1, 1, 1],
                                                        padding='SAME', use_bias=False, activation=tf.nn.relu,

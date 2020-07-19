@@ -1,8 +1,13 @@
 import os
 
+
+height = 296
+width = 400
+
+
 # batch size and number of epochs
 batch_size = 1
-n_epochs = 1
+n_epochs = 10
 
 # number of epochs to train in between validations
 n_eps_for_eval = 3
@@ -25,7 +30,7 @@ use_c3d_weights = True
 n_classes = 2
 
 # model number, output file name, save file directory, and save file name
-model_num = 2
+model_num = 6
 output_file_name = './output%d.txt' % model_num
 logdir = './logdir/'
 if not os.path.exists(logdir):  # creates the directory if it does not exist
