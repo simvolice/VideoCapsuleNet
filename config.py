@@ -1,8 +1,8 @@
 import os
 
 
-height = 296
-width = 400
+height = 352
+width = 472
 
 
 # batch size and number of epochs
