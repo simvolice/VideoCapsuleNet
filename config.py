@@ -4,10 +4,10 @@ import os
 height = 352
 width = 472
 
-multy_gpu = False
+multy_gpu = True
 
 # batch size and number of epochs
-batch_size = 1
+batch_size = 2
 n_epochs = 10
 
 # number of epochs to train in between validations
