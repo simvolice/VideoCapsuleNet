@@ -1,8 +1,8 @@
 import os
 
 
-height = 272
-width = 392
+height = 232
+width = 352
 
 multy_gpu = True
 
