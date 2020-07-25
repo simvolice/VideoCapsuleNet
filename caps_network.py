@@ -35,8 +35,15 @@ class Caps3d(object):
             self.is_train = tf.compat.v1.placeholder(tf.bool)
             self.m = tf.compat.v1.placeholder(tf.float32, shape=())
 
-            # initializes the network
-            self.init_network()
+            if config.multy_gpu:
+                half_batch = tf.cast(tf.shape(self.x_input)[0] / 2, tf.int32)
+                with tf.compat.v1.device('/gpu:0'):
+                    seg1 = self.init_network(self.x_input[:half_batch])
+                with tf.compat.v1.device('/gpu:1'):
+                    seg2 = self.init_network(self.x_input[half_batch:])
+                self.segment_layer = tf.concat([seg1, seg2], axis=0)
+            else:
+                self.segment_layer = self.init_network(self.x_input)
 
             # initializes the loss
             self.cur_m = config.start_m
@@ -86,117 +93,119 @@ class Caps3d(object):
                 'bc5b': tf.compat.v1.zeros_initializer()
             }
 
-    def init_network(self):
+    def init_network(self, half_batch):
         print('Building Caps3d Model')
+        with tf.compat.v1.variable_scope('network', reuse=tf.compat.v1.AUTO_REUSE) as scope:
 
-        # creates the video encoder
-        conv1 = tf.compat.v1.layers.conv3d(self.x_input, 64, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 1, 1],
-                                           activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc1'],
-                                           bias_initializer=self.w_and_b['bc1'], name='conv1')
+            # creates the video encoder
+            conv1 = tf.compat.v1.layers.conv3d(half_batch, 64, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 1, 1],
+                                               activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc1'],
+                                               bias_initializer=self.w_and_b['bc1'], name='conv1')
 
-        conv2 = tf.compat.v1.layers.conv3d(conv1, 128, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 2, 2],
-                                           activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc2'],
-                                           bias_initializer=self.w_and_b['bc2'], name='conv2')
+            conv2 = tf.compat.v1.layers.conv3d(conv1, 128, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 2, 2],
+                                               activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc2'],
+                                               bias_initializer=self.w_and_b['bc2'], name='conv2')
 
-        conv3 = tf.compat.v1.layers.conv3d(conv2, 256, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 1, 1],
-                                           activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc3a'],
-                                           bias_initializer=self.w_and_b['bc3a'], name='conv3')
+            conv3 = tf.compat.v1.layers.conv3d(conv2, 256, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 1, 1],
+                                               activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc3a'],
+                                               bias_initializer=self.w_and_b['bc3a'], name='conv3')
 
-        conv4 = tf.compat.v1.layers.conv3d(conv3, 256, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 2, 2],
-                                           activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc3b'],
-                                           bias_initializer=self.w_and_b['bc3b'], name='conv4')
+            conv4 = tf.compat.v1.layers.conv3d(conv3, 256, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 2, 2],
+                                               activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc3b'],
+                                               bias_initializer=self.w_and_b['bc3b'], name='conv4')
 
-        conv5 = tf.compat.v1.layers.conv3d(conv4, 512, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 1, 1],
-                                           activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc4a'],
-                                           bias_initializer=self.w_and_b['bc4a'], name='conv5')
+            conv5 = tf.compat.v1.layers.conv3d(conv4, 512, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 1, 1],
+                                               activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc4a'],
+                                               bias_initializer=self.w_and_b['bc4a'], name='conv5')
 
-        conv6 = tf.compat.v1.layers.conv3d(conv5, 512, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 1, 1],
-                                           activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc4b'],
-                                           bias_initializer=self.w_and_b['bc4b'], name='conv6')
+            conv6 = tf.compat.v1.layers.conv3d(conv5, 512, kernel_size=[3, 3, 3], padding='SAME', strides=[1, 1, 1],
+                                               activation=tf.nn.relu, kernel_initializer=self.w_and_b['wc4b'],
+                                               bias_initializer=self.w_and_b['bc4b'], name='conv6')
 
-        if config.print_layers:
-            print('Conv1:', conv1.get_shape())
-            print('Conv2:', conv2.get_shape())
-            print('Conv3:', conv3.get_shape())
-            print('Conv4:', conv4.get_shape())
-            print('Conv5:', conv5.get_shape())
-            print('Conv6:', conv6.get_shape())
+            if config.print_layers:
+                print('Conv1:', conv1.get_shape())
+                print('Conv2:', conv2.get_shape())
+                print('Conv3:', conv3.get_shape())
+                print('Conv4:', conv4.get_shape())
+                print('Conv5:', conv5.get_shape())
+                print('Conv6:', conv6.get_shape())
 
-        # creates the primary capsule layer: conv caps1
-        prim_caps = create_prim_conv3d_caps(conv6, 32, kernel_size=[3, 9, 9], strides=[1, 1, 1], padding='VALID',
-                                            name='prim_caps')
+            # creates the primary capsule layer: conv caps1
+            prim_caps = create_prim_conv3d_caps(conv6, 32, kernel_size=[3, 9, 9], strides=[1, 1, 1], padding='VALID',
+                                                name='prim_caps')
 
-        # creates the secondary capsule layer: conv caps2
-        sec_caps = create_conv3d_caps(prim_caps, 32, kernel_size=[3, 5, 5], strides=[1, 2, 2],
-                                      padding='VALID', name='sec_caps', route_mean=True)
+            # creates the secondary capsule layer: conv caps2
+            sec_caps = create_conv3d_caps(prim_caps, 32, kernel_size=[3, 5, 5], strides=[1, 2, 2],
+                                          padding='VALID', name='sec_caps', route_mean=True)
 
-        # creates the final capsule layer: class caps
-        pred_caps = create_dense_caps(sec_caps, config.n_classes, subset_routing=-1, route_min=0.0,
-                                      name='pred_caps', coord_add=True, ch_same_w=True)
-        if config.print_layers:
-            print('Primary Caps:', layer_shape(prim_caps))
-            print('Second Caps:', layer_shape(sec_caps))
-            print('Prediction Caps:', layer_shape(pred_caps))
+            # creates the final capsule layer: class caps
+            pred_caps = create_dense_caps(sec_caps, config.n_classes, subset_routing=-1, route_min=0.0,
+                                          name='pred_caps', coord_add=True, ch_same_w=True)
+            if config.print_layers:
+                print('Primary Caps:', layer_shape(prim_caps))
+                print('Second Caps:', layer_shape(sec_caps))
+                print('Prediction Caps:', layer_shape(pred_caps))
 
-        # obtains the activations of the class caps layer and gets the class prediction
-        self.digit_preds = tf.reshape(pred_caps[1], (-1, config.n_classes))
-        self.predictions = tf.cast(tf.argmax(input=self.digit_preds, axis=1), tf.int32)
+            # obtains the activations of the class caps layer and gets the class prediction
+            self.digit_preds = tf.reshape(pred_caps[1], (-1, config.n_classes))
+            self.predictions = tf.cast(tf.argmax(input=self.digit_preds, axis=1), tf.int32)
 
-        pred_caps_poses = pred_caps[0]
-        batch_size = tf.shape(input=pred_caps_poses)[0]
-        _, n_classes, dim = pred_caps_poses.get_shape()
-        n_classes, dim = map(int, [n_classes, dim])
+            pred_caps_poses = pred_caps[0]
+            batch_size = tf.shape(input=pred_caps_poses)[0]
+            _, n_classes, dim = pred_caps_poses.get_shape()
+            n_classes, dim = map(int, [n_classes, dim])
 
-        # masks the capsules that are not the ground truth (training) or the prediction (testing)
-        vec_to_use = tf.cond(pred=self.is_train, true_fn=lambda: self.y_input, false_fn=lambda: self.predictions)
-        vec_to_use = tf.one_hot(vec_to_use, depth=n_classes)
-        vec_to_use = tf.tile(tf.reshape(vec_to_use, (batch_size, n_classes, 1)), multiples=[1, 1, dim])
-        masked_caps = pred_caps_poses * tf.cast(vec_to_use, dtype=tf.float32)
-        masked_caps = tf.reshape(masked_caps, (batch_size, n_classes * dim))
+            # masks the capsules that are not the ground truth (training) or the prediction (testing)
+            vec_to_use = tf.cond(pred=self.is_train, true_fn=lambda: self.y_input, false_fn=lambda: self.predictions)
+            vec_to_use = tf.one_hot(vec_to_use, depth=n_classes)
+            vec_to_use = tf.tile(tf.reshape(vec_to_use, (batch_size, n_classes, 1)), multiples=[1, 1, dim])
+            masked_caps = pred_caps_poses * tf.cast(vec_to_use, dtype=tf.float32)
+            masked_caps = tf.reshape(masked_caps, (batch_size, n_classes * dim))
 
-        # creates the decoder network
-        recon_fc1 = tf.compat.v1.layers.dense(masked_caps, 4 * 38 * 53 * 1, activation=tf.nn.relu, name='recon_fc1')
-        recon_fc1 = tf.reshape(recon_fc1, (batch_size, 4, 38, 53, 1))
+            # creates the decoder network
+            recon_fc1 = tf.compat.v1.layers.dense(masked_caps, 4 * 8 * 8 * 1, activation=tf.nn.relu, name='recon_fc1')
+            recon_fc1 = tf.reshape(recon_fc1, (batch_size, 4, 8, 8, 1))
 
-        deconv1 = tf.compat.v1.layers.conv3d_transpose(recon_fc1, 128, kernel_size=[1, 3, 3], strides=[1, 1, 1],
-                                                       padding='SAME', use_bias=False, activation=tf.nn.relu,
-                                                       name='deconv1')
+            deconv1 = tf.compat.v1.layers.conv3d_transpose(recon_fc1, 128, kernel_size=[1, 3, 3], strides=[1, 1, 1],
+                                                           padding='SAME', use_bias=False, activation=tf.nn.relu,
+                                                           name='deconv1')
 
-        skip_connection1 = create_skip_connection(sec_caps, 128, kernel_size=[1, 3, 3], strides=[1, 1, 1],
-                                                  padding='SAME', name='skip_1')
-        deconv1 = tf.concat([deconv1, skip_connection1], axis=-1)
+            skip_connection1 = create_skip_connection(sec_caps, 128, kernel_size=[1, 3, 3], strides=[1, 1, 1],
+                                                      padding='SAME', name='skip_1')
+            deconv1 = tf.concat([deconv1, skip_connection1], axis=-1)
 
-        deconv2 = tf.compat.v1.layers.conv3d_transpose(deconv1, 128, kernel_size=[3, 6, 6], strides=[1, 2, 2],
-                                                       padding='VALID', use_bias=False, activation=tf.nn.relu,
-                                                       name='deconv2')
+            deconv2 = tf.compat.v1.layers.conv3d_transpose(deconv1, 128, kernel_size=[3, 6, 6], strides=[1, 2, 2],
+                                                           padding='VALID', use_bias=False, activation=tf.nn.relu,
+                                                           name='deconv2')
 
-        skip_connection2 = create_skip_connection(prim_caps, 128, kernel_size=[1, 3, 3], strides=[1, 1, 1],
-                                                  padding='SAME', name='skip_2')
-        deconv2 = tf.concat([deconv2, skip_connection2], axis=-1)
+            skip_connection2 = create_skip_connection(prim_caps, 128, kernel_size=[1, 3, 3], strides=[1, 1, 1],
+                                                      padding='SAME', name='skip_2')
+            deconv2 = tf.concat([deconv2, skip_connection2], axis=-1)
 
-        deconv3 = tf.compat.v1.layers.conv3d_transpose(deconv2, 256, kernel_size=[3, 9, 9], strides=[1, 1, 1],
-                                                       padding='VALID',
-                                                       use_bias=False, activation=tf.nn.relu, name='deconv3')
+            deconv3 = tf.compat.v1.layers.conv3d_transpose(deconv2, 256, kernel_size=[3, 9, 9], strides=[1, 1, 1],
+                                                           padding='VALID',
+                                                           use_bias=False, activation=tf.nn.relu, name='deconv3')
 
-        deconv4 = tf.compat.v1.layers.conv3d_transpose(deconv3, 256, kernel_size=[1, 3, 3], strides=[1, 2, 2],
-                                                       padding='SAME',
-                                                       use_bias=False, activation=tf.nn.relu, name='deconv4')
+            deconv4 = tf.compat.v1.layers.conv3d_transpose(deconv3, 256, kernel_size=[1, 3, 3], strides=[1, 2, 2],
+                                                           padding='SAME',
+                                                           use_bias=False, activation=tf.nn.relu, name='deconv4')
 
-        deconv5 = tf.compat.v1.layers.conv3d_transpose(deconv4, 256, kernel_size=[1, 3, 3], strides=[1, 2, 2],
-                                                       padding='SAME',
-                                                       use_bias=False, activation=tf.nn.relu, name='deconv5')
+            deconv5 = tf.compat.v1.layers.conv3d_transpose(deconv4, 256, kernel_size=[1, 3, 3], strides=[1, 2, 2],
+                                                           padding='SAME',
+                                                           use_bias=False, activation=tf.nn.relu, name='deconv5')
 
-        self.segment_layer = tf.compat.v1.layers.conv3d(deconv5, 1, kernel_size=[1, 3, 3], strides=[1, 1, 1],
-                                                        padding='SAME', activation=None, name='segment_layer')
-        self.segment_layer_sig = tf.nn.sigmoid(self.segment_layer)
+            segment_layer = tf.compat.v1.layers.conv3d(deconv5, 1, kernel_size=[1, 3, 3], strides=[1, 1, 1],
+                                                       padding='SAME', activation=None, name='segment_layer')
 
-        if config.print_layers:
-            print('Deconv Layer 1:', deconv1.get_shape())
-            print('Deconv Layer 2:', deconv2.get_shape())
-            print('Deconv Layer 3:', deconv3.get_shape())
-            print('Deconv Layer 4:', deconv4.get_shape())
-            print('Deconv Layer 5:', deconv5.get_shape())
-            print('Segmentation Layer:', self.segment_layer.get_shape())
+            if config.print_layers:
+                print('Deconv Layer 1:', deconv1.get_shape())
+                print('Deconv Layer 2:', deconv2.get_shape())
+                print('Deconv Layer 3:', deconv3.get_shape())
+                print('Deconv Layer 4:', deconv4.get_shape())
+                print('Deconv Layer 5:', deconv5.get_shape())
+                print('Segmentation Layer:', segment_layer.get_shape())
+
+            return segment_layer
 
     def init_loss_and_opt(self):
         y_onehot = tf.one_hot(indices=self.y_input, depth=config.n_classes)
@@ -237,7 +246,7 @@ class Caps3d(object):
         # continues until no more training data is generated
         losses, batch, acc, s_losses = 0, 0, 0, 0
 
-        pbar = tqdm(total=int(data_gen.getTrainFilesLen()/config.batch_size))
+        pbar = tqdm(total=int(data_gen.getTrainFilesLen() / config.batch_size))
         while data_gen.has_data():
             x_batch, bbox_batch, y_batch = data_gen.get_batch(config.batch_size)
 
@@ -256,7 +265,6 @@ class Caps3d(object):
             s_losses += s_loss
             batch += 1
 
-
             # prints the loss and accuracy statistics after a certain number of batches
             if batch % config.batches_until_print == 0:
                 print(preds[0][:10])  # prints activations just in case of numerical instability
@@ -264,7 +272,7 @@ class Caps3d(object):
                       'Avg Segmentation Loss is %.4f. Accuracy is %.4f.'
                       % (batch, time.time() - start_time, losses / batch, s_losses / batch, acc / batch))
 
-        # prints the loss and accuracy statistics for the entire epoch
+            # prints the loss and accuracy statistics for the entire epoch
             print(preds[0][:10])  # prints activations just in case of numerical instability
         pbar.close()
         print('Epoch finished in %d(s). Avg Classification loss is %.4f. Avg Segmentation Loss is %.4f. '

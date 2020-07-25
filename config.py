@@ -4,6 +4,7 @@ import os
 height = 352
 width = 472
 
+multy_gpu = False
 
 # batch size and number of epochs
 batch_size = 1
