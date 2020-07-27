@@ -8,7 +8,7 @@ import cv2
 from threading import Thread
 import config
 
-dataset_dir = '../VideoCapsuleNetUpd/'
+dataset_dir = '../VideoCapsuleNet/'
 frame_dir = './UCF101_Frames/frames/'
 
 
@@ -2867,23 +2867,26 @@ def get_det_annotations():
     files = os.listdir("./UCF101_Frames/frames/")
     training_annotations = []
     training_annotationsPureNameFiles = []
-    training_annotationsPureNameFilesFight = []
 
-    for filename in smokeData:
-        splitStr = filename.split(":")
-        nameVideoFromList = splitStr[0]
-        startFrameVideoFromList = splitStr[1]
-        label = 0
-        resultNameVid = nameVideoFromList + "_" + startFrameVideoFromList
+    indexStopIterationSmokeData = 0
+    indexStopIterationFightData = 0
 
-        file_name = resultNameVid
-        annotations = []
-        ef = 40
-        sf = 0
+    for fileItem in files:
+        for filename in smokeData:
+            splitStr = filename.split(":")
+            nameVideoFromList = splitStr[0]
+            startFrameVideoFromList = splitStr[1]
+            label = 0
+            resultNameVid = nameVideoFromList + "_" + startFrameVideoFromList
 
-        for fileItem in files:
+            file_name = resultNameVid
+            annotations = []
+            ef = 40
+            sf = 0
             if fileItem == file_name:
-                if file_name not in training_annotationsPureNameFiles:
+
+                if fileItem not in training_annotationsPureNameFiles:
+
                     image = cv2.imread(os.path.join(frame_dir, fileItem, "frame_0.jpg"))
                     h, w, d = image.shape
                     bbox = [float(splitStr[3]) * w, float(splitStr[4]) * h, float(splitStr[5]) * w,
@@ -2892,24 +2895,27 @@ def get_det_annotations():
                     for val in range(0, 40):
                         bboxForOneFile.append(bbox)
                     bboxes = np.array(bboxForOneFile).astype(np.int32)
-                    training_annotationsPureNameFiles.append(file_name)
+                    training_annotationsPureNameFiles.append(fileItem)
                     annotations.append((sf, ef, label, bboxes))
-                    training_annotations.append((file_name, annotations))
-    for filename in fightData:
-        splitStr = filename.split(":")
-        nameVideoFromList = splitStr[0]
-        startFrameVideoFromList = splitStr[1]
-        label = 1
-        resultNameVid = nameVideoFromList + "_" + startFrameVideoFromList
+                    if indexStopIterationSmokeData != config.indexStopIterationDataSet:
+                        training_annotations.append((fileItem, annotations))
+                        indexStopIterationSmokeData += 1
 
-        file_name = resultNameVid
-        annotations = []
-        ef = 40
-        sf = 0
+    for fileItem in files:
 
-        for fileItem in files:
+        for filename in fightData:
+            splitStr = filename.split(":")
+            nameVideoFromList = splitStr[0]
+            startFrameVideoFromList = splitStr[1]
+            label = 1
+            resultNameVid = nameVideoFromList + "_" + startFrameVideoFromList
+            file_name = resultNameVid
+            annotations = []
+            ef = 40
+            sf = 0
             if fileItem == file_name:
-                if file_name not in training_annotationsPureNameFilesFight:
+                if fileItem not in training_annotationsPureNameFiles:
+
                     image = cv2.imread(os.path.join(frame_dir, fileItem, "frame_0.jpg"))
                     h, w, d = image.shape
                     bbox = [float(splitStr[3]) * w, float(splitStr[4]) * h, float(splitStr[5]) * w,
@@ -2918,9 +2924,12 @@ def get_det_annotations():
                     for val in range(0, 40):
                         bboxForOneFile.append(bbox)
                     bboxes = np.array(bboxForOneFile).astype(np.int32)
-                    training_annotationsPureNameFilesFight.append(file_name)
+                    training_annotationsPureNameFiles.append(fileItem)
                     annotations.append((sf, ef, label, bboxes))
-                    training_annotations.append((file_name, annotations))
+
+                    if indexStopIterationFightData != config.indexStopIterationDataSet:
+                        training_annotations.append((fileItem, annotations))
+                        indexStopIterationFightData += 1
 
     return training_annotations
 
@@ -3040,7 +3049,6 @@ class UCF101TrainDataGenDet(object):
         self.sec_to_wait = sec_to_wait
         self.frame_skip = frame_skip
         self.frames_dir = dataset_dir + 'UCF101_Frames/frames/'
-
         np.random.seed(None)
         random.shuffle(self.train_files)
 
@@ -3084,6 +3092,3 @@ class UCF101TrainDataGenDet(object):
 
     def has_data(self):
         return self.data_queue != [] or self.train_files != []
-
-    def getTrainFilesLen(self):
-        return len(self.train_files)

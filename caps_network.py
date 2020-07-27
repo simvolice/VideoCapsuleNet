@@ -163,8 +163,8 @@ class Caps3d(object):
             masked_caps = tf.reshape(masked_caps, (batch_size, n_classes * dim))
 
             # creates the decoder network
-            recon_fc1 = tf.compat.v1.layers.dense(masked_caps, 4 * 19 * 19 * 1, activation=tf.nn.relu, name='recon_fc1')
-            recon_fc1 = tf.reshape(recon_fc1, (batch_size, 4, 19, 19, 1))
+            recon_fc1 = tf.compat.v1.layers.dense(masked_caps, 4 * 38 * 53 * 1, activation=tf.nn.relu, name='recon_fc1')
+            recon_fc1 = tf.reshape(recon_fc1, (batch_size, 4, 38, 53, 1))
 
             deconv1 = tf.compat.v1.layers.conv3d_transpose(recon_fc1, 128, kernel_size=[1, 3, 3], strides=[1, 1, 1],
                                                            padding='SAME', use_bias=False, activation=tf.nn.relu,
@@ -246,7 +246,7 @@ class Caps3d(object):
         # continues until no more training data is generated
         losses, batch, acc, s_losses = 0, 0, 0, 0
 
-        pbar = tqdm(total=int(data_gen.getTrainFilesLen() / config.batch_size))
+        pbar = tqdm(total=300)
         while data_gen.has_data():
             x_batch, bbox_batch, y_batch = data_gen.get_batch(config.batch_size)
 
