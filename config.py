@@ -1,5 +1,7 @@
 import os
 
+start_at_epoch = 1
+save_every_n_epochs = 20
 indexStopIterationDataSet = 300
 height = 352
 width = 472
@@ -7,8 +9,8 @@ width = 472
 multy_gpu = False
 
 # batch size and number of epochs
-batch_size = 2
-n_epochs = 100
+batch_size = 1
+n_epochs = 80
 
 # number of epochs to train in between validations
 n_eps_for_eval = 3
@@ -39,8 +41,7 @@ if not os.path.exists(logdir):  # creates the directory if it does not exist
 network_save_dir = './network_saves/'
 if not os.path.exists(network_save_dir):  # creates the directory if it does not exist
     os.mkdir(network_save_dir)
-save_file_name = network_save_dir + ('model_%d.ckpt' % model_num)
-
+save_file_name = ('./network_saves/model%d' % model_num) + '_%d.ckpt'
 # coefficient for the segmentation loss
 segment_coef = 0.0002
 

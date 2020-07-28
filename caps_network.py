@@ -246,7 +246,7 @@ class Caps3d(object):
         # continues until no more training data is generated
         losses, batch, acc, s_losses = 0, 0, 0, 0
 
-        pbar = tqdm(total=300)
+        pbar = tqdm(total=600)
         while data_gen.has_data():
             x_batch, bbox_batch, y_batch = data_gen.get_batch(config.batch_size)
 
@@ -264,6 +264,11 @@ class Caps3d(object):
             losses += loss
             s_losses += s_loss
             batch += 1
+            if np.isnan(preds[0][0]):
+                print(preds[0][:10])
+                print('NAN encountered.')
+                config.write_output('NAN encountered.\n')
+                return -1, -1, -1
 
             # prints the loss and accuracy statistics after a certain number of batches
             if batch % config.batches_until_print == 0:
@@ -271,117 +276,13 @@ class Caps3d(object):
                 print('Finished %d batches. %d(s) since start. Avg Classification Loss is %.4f. '
                       'Avg Segmentation Loss is %.4f. Accuracy is %.4f.'
                       % (batch, time.time() - start_time, losses / batch, s_losses / batch, acc / batch))
-
-            # prints the loss and accuracy statistics for the entire epoch
-            print(preds[0][:10])  # prints activations just in case of numerical instability
+            print(preds[0][:10])
         pbar.close()
         print('Epoch finished in %d(s). Avg Classification loss is %.4f. Avg Segmentation Loss is %.4f. '
               'Accuracy is %.4f.'
               % (time.time() - start_time, losses / batch, s_losses / batch, acc / batch))
 
         return losses / batch, s_losses / batch, acc / batch
-
-    def eval(self, sess, data_gen, validation=True):
-        mlosses, slosses, corrs = [], [], 0
-        conf_matrix = np.zeros((config.n_classes, config.n_classes), dtype=np.int32)
-        start_time = time.time()
-        batch = 0
-        for i in range(data_gen.n_videos):
-            video, bbox, label = data_gen.get_next_video()
-
-            # gets losses and predictionfor a single video
-            mloss, sloss, pred = self.eval_on_vid(sess, video, bbox, label, validation)
-
-            # accumulates video statistics
-            conf_matrix[label, pred] += 1
-            mlosses.append(mloss)
-            slosses.append(sloss)
-            corrs += (1 if pred == label else 0)
-            batch += 1
-
-            # print statistics every 500 videos
-            if batch % 500 == 0:
-                print('Tested %d videos. %d(s) since start. Avg Accuracy is %.4f'
-                      % (batch, time.time() - start_time, float(corrs) / batch))
-
-        # print evaluation statistics for all evaluation videos
-        print('Evaluation done in %d(s).' % (time.time() - start_time))
-        print('Test Classification Loss: %.4f. Test Segmentation Loss: %.4f. Accuracy: %.4f.'
-              % (float(np.mean(mlosses)), float(np.mean(slosses)), float(corrs) / data_gen.n_videos))
-
-        return np.mean(mlosses), np.mean(slosses), float(corrs) / data_gen.n_videos, conf_matrix
-
-    def eval_on_vid(self, sess, video, bbox, label, validation):
-        losses, slosses, norms = [], [], []
-        frames, _, _, _ = video.shape
-
-        # ensures the video is trimmed and separate video into clips of 8 frames
-        f_skip = config.frame_skip
-        clips = []
-        n_frames = video.shape[0]
-        for i in range(0, video.shape[0], 8 * f_skip):
-            for j in range(f_skip):
-                b_vid, b_bbox = [], []
-                for k in range(8):
-                    ind = i + j + k * f_skip
-                    if ind >= n_frames:
-                        b_vid.append(np.zeros((1, 350, 470, 3), dtype=np.float32))
-                        b_bbox.append(np.zeros((1, 350, 470, 1), dtype=np.float32))
-                    else:
-                        b_vid.append(video[ind:ind + 1, :, :, :])
-                        b_bbox.append(bbox[ind:ind + 1, :, :, :])
-
-                clips.append((np.concatenate(b_vid, axis=0), np.concatenate(b_bbox, axis=0), label))
-                if clips[-1][1].sum() == 0:
-                    clips.pop(-1)
-
-        if len(clips) == 0:
-            print('Video has no bounding boxes')
-            return 0, 0, 0, 0, 0
-
-        # groups clips into batches
-        batches, gt_segmentations = [], []
-        for i in range(0, len(clips), config.batch_size):
-            x_batch, bb_batch, y_batch = [], [], []
-            for j in range(i, min(i + config.batch_size, len(clips))):
-                x, bb, y = clips[j]
-                x_batch.append(x)
-                bb_batch.append(bb)
-                y_batch.append(y)
-            batches.append((x_batch, bb_batch, y_batch))
-            gt_segmentations.append(np.stack(bb_batch))
-
-        # if doing validation, only do one batch per video
-        if validation:
-            batches = batches[:1]
-
-        # runs the network on the clips
-        n_clips = 0
-        for x_batch, bbox_batch, y_batch in batches:
-            loss, sloss, norm = sess.run([self.class_loss, self.segmentation_loss, self.digit_preds],
-                                         feed_dict={self.x_input: x_batch, self.y_input: y_batch,
-                                                    self.m: 0.9, self.is_train: False,
-                                                    self.y_bbox: bbox_batch})
-
-            n_clips_in_batch = len(x_batch)
-            losses.append(loss * n_clips_in_batch)
-            slosses.append(sloss * n_clips_in_batch)
-            norms.append(norm)
-            n_clips += n_clips_in_batch
-
-        # calculates network prediction
-        if len(norms) > 1:
-            concat_norms = np.concatenate(norms, axis=0)
-        else:
-            concat_norms = norms[0]
-        norm_mean = np.mean(concat_norms, axis=0)
-        pred = np.argmax(norm_mean)
-
-        # gets average losses
-        fin_mloss = float(np.sum(losses) / n_clips)
-        fin_sloss = float(np.sum(slosses) / n_clips)
-
-        return fin_mloss, fin_sloss, pred
 
     def save(self, sess, file_name):
         # saves the model

@@ -23,17 +23,39 @@ def train_network(gpu_config):
         tf.compat.v1.global_variables_initializer().run()
 
         get_num_params()
-        config.clear_output()
+        if config.start_at_epoch <= 1:
+            config.clear_output()
+        # else:
+        #     capsnet.load(sess, config.save_file_name % (config.start_at_epoch - 1))
+        #     print('Loading from epoch %d.' % (config.start_at_epoch - 1))
 
         n_eps_after_acc, best_loss = -1, 100000
         print('Training on UCF101')
-        for ep in range(1, config.n_epochs + 1):
+        for ep in range(config.start_at_epoch, config.n_epochs + 1):
             print(20 * '*', 'epoch', ep, 20 * '*')
-
+            nan_tries = 0
             # trains network for one epoch
             data_gen = TrainDataGen(config.wait_for_data, frame_skip=config.frame_skip)
             margin_loss, seg_loss, acc = capsnet.train(sess, data_gen)
-            config.write_output('CL: %.4f. SL: %.4f. Acc: %.4f\n' % (margin_loss, seg_loss, acc))
+
+            if margin_loss < 0 or acc < 0:
+                nan_tries += 1
+                # capsnet.load(sess, config.save_file_name % 1)  # loads in the previous epoch
+                # while data_gen.has_data():
+                #     data_gen.get_batch(config.batch_size)
+            else:
+                config.write_output('CL: %.4f. SL: %.4f. Acc: %.4f\n' % (margin_loss, seg_loss, acc))
+
+            if nan_tries == 3:
+                print('Network cannot be trained. Too many NaN issues.')
+                exit()
+
+            if ep % config.save_every_n_epochs == 0:
+                try:
+                    capsnet.save(sess, config.save_file_name % ep)
+                    config.write_output('Saved Network\n')
+                except:
+                    print('Failed to save network!!!')
 
             # increments the margin
             if ep % config.n_eps_for_m == 0:
