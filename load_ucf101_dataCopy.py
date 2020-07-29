@@ -2871,6 +2871,11 @@ def get_det_annotations():
     indexStopIterationSmokeData = 0
     indexStopIterationFightData = 0
 
+    np.random.seed(None)
+    random.shuffle(files)
+    random.shuffle(fightData)
+    random.shuffle(smokeData)
+
     for fileItem in files:
         for filename in smokeData:
             splitStr = filename.split(":")
