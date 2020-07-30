@@ -10,7 +10,7 @@ multy_gpu = False
 
 # batch size and number of epochs
 batch_size = 1
-n_epochs = 80
+n_epochs = 50
 
 # number of epochs to train in between validations
 n_eps_for_eval = 3
@@ -54,7 +54,7 @@ n_eps_for_m = 5
 frame_skip = 1
 
 # time to wait for data to load when dataloader is created
-wait_for_data = 240
+wait_for_data = 180
 
 # number of batches to train on before statistics are printed to stdio
 batches_until_print = 100

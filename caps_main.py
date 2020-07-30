@@ -41,12 +41,12 @@ def train_network(gpu_config):
 
                 if margin_loss < 0 or acc < 0:
                     nan_tries += 1
-                    # capsnet.load(sess, config.save_file_name % 1)  # loads in the previous epoch
+                    # capsnet.load(sess, config.save_file_name % 20)  # loads in the previous epoch
                     # while data_gen.has_data():
                     #     data_gen.get_batch(config.batch_size)
                 else:
                     config.write_output('CL: %.4f. SL: %.4f. Acc: %.4f\n' % (margin_loss, seg_loss, acc))
-
+                    break
             if nan_tries == 3:
                 print('Network cannot be trained. Too many NaN issues.')
                 exit()
@@ -81,7 +81,7 @@ def train_network(gpu_config):
                 # if t_loss < best_loss:
                 #     best_loss = t_loss
                 try:
-                    capsnet.save(sess, config.save_file_name)
+                    capsnet.save(sess, config.save_file_name % ep)
                     config.write_output('Saved Network\n')
                 except:
                     print('Failed to save network!!!')
