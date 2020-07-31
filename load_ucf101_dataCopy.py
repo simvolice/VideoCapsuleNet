@@ -3014,7 +3014,7 @@ def get_clip_det(video, bbox, clip_len=8, any_clip=False):
         ann_locs = [i for i in ann_locs if (i + clip_len - 1) in ann_locs]
 
         try:
-            start_loc = ann_locs[np.random.randint(0, len(ann_locs))]
+            start_loc = ann_locs[0]
         except:
             start_loc = min(np.where(frame_anns > 0)[0][0], video.shape[0] - clip_len)
 
@@ -3074,7 +3074,7 @@ class UCF101TrainDataGenDet(object):
             clip, bbox_clip, label = get_video_det(self.frames_dir + vid_name + '/', anns, skip_frames=self.frame_skip,
                                                    start_rand=False)
             clip, bbox_clip = get_clip_det(clip, bbox_clip, any_clip=False)
-            clip, bbox_clip = crop_clip_det(clip, bbox_clip, (config.height, config.width), shuffle=True)
+            clip, bbox_clip = crop_clip_det(clip, bbox_clip, (config.height, config.width), shuffle=False)
             self.data_queue.append((clip, bbox_clip, label))
         print('Loading data thread finished')
 

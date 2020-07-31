@@ -1,7 +1,7 @@
 import os
 
 start_at_epoch = 1
-save_every_n_epochs = 20
+save_every_n_epochs = 10
 indexStopIterationDataSet = 300
 height = 352
 width = 472
@@ -10,7 +10,7 @@ multy_gpu = False
 
 # batch size and number of epochs
 batch_size = 1
-n_epochs = 50
+n_epochs = 20
 
 # number of epochs to train in between validations
 n_eps_for_eval = 3
