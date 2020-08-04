@@ -25,9 +25,9 @@ def train_network(gpu_config):
         get_num_params()
         if config.start_at_epoch <= 1:
             config.clear_output()
-        # else:
-        #     capsnet.load(sess, config.save_file_name % (config.start_at_epoch - 1))
-        #     print('Loading from epoch %d.' % (config.start_at_epoch - 1))
+        else:
+            capsnet.load(sess, config.save_file_name % (config.start_at_epoch - 1))
+            print('Loading from epoch %d.' % (config.start_at_epoch - 1))
 
         n_eps_after_acc, best_loss = -1, 100000
         print('Training on UCF101')
