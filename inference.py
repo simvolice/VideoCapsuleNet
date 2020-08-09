@@ -13,7 +13,7 @@ def inference(video_name):
     capsnet = Caps3d()
     with tf.compat.v1.Session(graph=capsnet.graph, config=gpu_config) as sess:
         tf.compat.v1.global_variables_initializer().run()
-        capsnet.load(sess, config.save_file_name)
+        capsnet.load(sess, config.save_file_name % (config.start_at_epoch - 1))
 
         video = vread(video_name)
 

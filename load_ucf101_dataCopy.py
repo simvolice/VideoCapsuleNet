@@ -2868,14 +2868,6 @@ def get_det_annotations():
     training_annotations = []
     training_annotationsPureNameFiles = []
 
-    indexStopIterationSmokeData = 0
-    indexStopIterationFightData = 0
-
-    np.random.seed(None)
-    random.shuffle(files)
-    random.shuffle(fightData)
-    random.shuffle(smokeData)
-
     for fileItem in files:
         for filename in smokeData:
             splitStr = filename.split(":")
@@ -2902,9 +2894,7 @@ def get_det_annotations():
                     bboxes = np.array(bboxForOneFile).astype(np.int32)
                     training_annotationsPureNameFiles.append(fileItem)
                     annotations.append((sf, ef, label, bboxes))
-                    if indexStopIterationSmokeData != config.indexStopIterationDataSet:
-                        training_annotations.append((fileItem, annotations))
-                        indexStopIterationSmokeData += 1
+                    training_annotations.append((fileItem, annotations))
 
     for fileItem in files:
 
@@ -2931,10 +2921,7 @@ def get_det_annotations():
                     bboxes = np.array(bboxForOneFile).astype(np.int32)
                     training_annotationsPureNameFiles.append(fileItem)
                     annotations.append((sf, ef, label, bboxes))
-
-                    if indexStopIterationFightData != config.indexStopIterationDataSet:
-                        training_annotations.append((fileItem, annotations))
-                        indexStopIterationFightData += 1
+                    training_annotations.append((fileItem, annotations))
 
     return training_annotations
 
