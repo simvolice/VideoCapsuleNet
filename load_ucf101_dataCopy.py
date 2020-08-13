@@ -3001,7 +3001,7 @@ def get_clip_det(video, bbox, clip_len=8, any_clip=False):
         ann_locs = [i for i in ann_locs if (i + clip_len - 1) in ann_locs]
 
         try:
-            start_loc = ann_locs[0]
+            start_loc = ann_locs[np.random.randint(0, len(ann_locs))]
         except:
             start_loc = min(np.where(frame_anns > 0)[0][0], video.shape[0] - clip_len)
 

@@ -5,7 +5,6 @@ save_every_n_epochs = 20
 indexStopIterationDataSet = 300
 height = 112
 width = 112
-
 multy_gpu = False
 
 # batch size and number of epochs
