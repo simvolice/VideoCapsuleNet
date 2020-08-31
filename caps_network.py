@@ -44,7 +44,7 @@ class Caps3d(object):
                 self.segment_layer = tf.concat([seg1, seg2], axis=0)
             else:
                 self.segment_layer = self.init_network(self.x_input, self.y_input)
-
+                self.segment_layer_sig = tf.nn.sigmoid(self.segment_layer)
             # initializes the loss
             self.cur_m = config.start_m
             self.init_loss_and_opt()
@@ -246,7 +246,7 @@ class Caps3d(object):
         # continues until no more training data is generated
         losses, batch, acc, s_losses = 0, 0, 0, 0
 
-        pbar = tqdm(total=317)
+        pbar = tqdm(total=1434)
         while data_gen.has_data():
             x_batch, bbox_batch, y_batch = data_gen.get_batch(config.batch_size)
 

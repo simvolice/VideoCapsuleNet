@@ -1,7 +1,7 @@
 import shutil
 import os
 
-outdir_clips = "/root/PycharmProjects/VideoCapsuleNet/UCF101_Frames/frames/"
+outdir_clips = "/root/PycharmProjects/VideoCapsuleNetUpd/UCF101_Frames/frames/"
 
 allFrameDirs = os.listdir(outdir_clips)
 
@@ -18,3 +18,7 @@ def deleteFramesOutOfRange():
         for deleteFilesNumber in range(40, len(os.listdir(os.path.join(outdir_clips, dirClip)))):
             os.remove(os.path.join(outdir_clips, dirClip, "frame_{}.jpg".format(deleteFilesNumber)))
             print("delete...")
+
+
+#insertZeroFrame()
+deleteFramesOutOfRange()

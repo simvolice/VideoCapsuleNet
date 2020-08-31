@@ -53,7 +53,7 @@ n_eps_for_m = 5
 frame_skip = 1
 
 # time to wait for data to load when dataloader is created
-wait_for_data = 180
+wait_for_data = 5
 
 # number of batches to train on before statistics are printed to stdio
 batches_until_print = 100

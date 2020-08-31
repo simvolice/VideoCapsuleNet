@@ -65,6 +65,7 @@ def inference(video_name):
             predictions.append(pred)
             predictions = np.concatenate(predictions, axis=0)
             predictions = predictions.reshape((-1, config.n_classes))
+            print(predictions)
             fin_pred = np.mean(predictions, axis=0)
             print("Pred after np.mean", fin_pred)
             fin_pred = np.argmax(fin_pred)
